@@ -231,7 +231,7 @@ type RolloutTrafficRouting struct {
 	// SMI holds TrafficSplit specific configuration to route traffic
 	SMI *SMITrafficRouting `json:"smi,omitempty"`
 	// SMI holds TrafficSplit specific configuration to route traffic
-	Kapcom *KapcomTrafficRouting `json:"smi,omitempty"`
+	Kapcom *KapcomTrafficRouting `json:"kapcom,omitempty"`
 }
 
 // SMITrafficRouting configuration for TrafficSplit Custom Resource to control traffic routing

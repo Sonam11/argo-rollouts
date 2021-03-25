@@ -50,16 +50,24 @@ func (r *Reconciler) Type() string {
 
 func (r *Reconciler) SetWeight(desiredWeight int32) error {
 	ctx := context.TODO()
-	stableIngressName := r.cfg.Rollout.Spec.Strategy.Canary.TrafficRouting.Nginx.StableIngress
+	stableIngressName := r.cfg.Rollout.Spec.Strategy.Canary.TrafficRouting.Kapcom.Ingress
 	canaryIngressName := stableIngressName + "-base-canary"
-	// canaryServiceName := r.cfg.Rollout.Spec.Strategy.Canary.CanaryService
 
-	// Check if stable ingress exists (from lister, which has a cache), error if it does not
-	_, err := r.cfg.IngressLister.Ingresses(r.cfg.Rollout.Namespace).Get(stableIngressName)
+	fqdnIngress, err := r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, stableIngressName, metav1.GetOptions{})
 	if err != nil {
 		r.log.WithField(logutil.IngressKey, stableIngressName).WithField("err", err.Error()).Error("error retrieving stableIngress")
 		return fmt.Errorf("error retrieving stableIngress `%s` from cache: %v", stableIngressName, err)
 	}
+	r.log.Info("Fqdn ingress is atleast able to get", fqdnIngress.Spec.VirtualHost.Fqdn)
+
+	// canaryServiceName := r.cfg.Rollout.Spec.Strategy.Canary.CanaryService
+
+	// Check if stable ingress exists (from lister, which has a cache), error if it does not
+	//_, err := r.cfg.IngressLister.Ingresses(r.cfg.Rollout.Namespace).Get(stableIngressName)
+	//if err != nil {
+	//	r.log.WithField(logutil.IngressKey, stableIngressName).WithField("err", err.Error()).Error("error retrieving stableIngress")
+	//	return fmt.Errorf("error retrieving stableIngress `%s` from cache: %v", stableIngressName, err)
+	//}
 	// Check if canary ingress exists (from lister which has a cache), determines whether we later call Create() or Update()
 	// canaryIngress, err := r.cfg.IngressLister.Ingresses(r.cfg.Rollout.Namespace).Get(canaryIngressName)
 	canaryIngress, err := r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, canaryIngressName, metav1.GetOptions{})
@@ -87,8 +95,8 @@ func (r *Reconciler) SetWeight(desiredWeight int32) error {
 			return nil
 		}
 		if !k8serrors.IsAlreadyExists(err) {
-			r.log.WithField(logutil.IngressKey, canaryIngressName).WithField("err", err.Error()).Error("error creating canary ingress")
-			return fmt.Errorf("error creating canary ingress `%s`: %v", canaryIngressName, err)
+			r.log.WithField(logutil.IngressKey, canaryIngressName).WithField("err", err.Error()).Error("error creating canary ingressroutes")
+			return fmt.Errorf("error creating canary ingressroutes `%s`: %v", canaryIngressName, err)
 		}
 		// Canary ingress was created by a different reconcile call before this one could complete (race)
 		// This means we just read it from the API now (instead of cache) and continue with the normal
