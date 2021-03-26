@@ -25,6 +25,7 @@ import (
 
 	versioned "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/argoproj/argo-rollouts/pkg/client/informers/externalversions/internalinterfaces"
+	kapcom "github.com/argoproj/argo-rollouts/pkg/client/informers/externalversions/kapcom"
 	rollouts "github.com/argoproj/argo-rollouts/pkg/client/informers/externalversions/rollouts"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -172,7 +173,12 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
+	Kapcom() kapcom.Interface
 	Argoproj() rollouts.Interface
+}
+
+func (f *sharedInformerFactory) Kapcom() kapcom.Interface {
+	return kapcom.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Argoproj() rollouts.Interface {

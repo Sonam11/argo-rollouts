@@ -9,8 +9,10 @@ import (
 	extensionslisters "k8s.io/client-go/listers/extensions/v1beta1"
 	"k8s.io/client-go/tools/record"
 
+	"github.com/argoproj/argo-rollouts/pkg/apis/kapcom/v1beta1"
 	"github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
-	argoprojclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
+
+	kapcomclientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
 	logutil "github.com/argoproj/argo-rollouts/utils/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +25,7 @@ const Type = "Kapcom"
 // ReconcilerConfig describes static configuration data for the nginx reconciler
 type ReconcilerConfig struct {
 	Rollout        *v1alpha1.Rollout
-	Client         argoprojclientset.Interface
+	Client         kapcomclientset.Interface
 	Recorder       record.EventRecorder
 	ControllerKind schema.GroupVersionKind
 	IngressLister  extensionslisters.IngressLister
@@ -53,12 +55,13 @@ func (r *Reconciler) SetWeight(desiredWeight int32) error {
 	stableIngressName := r.cfg.Rollout.Spec.Strategy.Canary.TrafficRouting.Kapcom.Ingress
 	canaryIngressName := stableIngressName + "-base-canary"
 
-	fqdnIngress, err := r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, stableIngressName, metav1.GetOptions{})
+	fqdnIngress, err := r.cfg.Client.KapcomV1beta1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, stableIngressName, metav1.GetOptions{})
 	if err != nil {
 		r.log.WithField(logutil.IngressKey, stableIngressName).WithField("err", err.Error()).Error("error retrieving stableIngress")
 		return fmt.Errorf("error retrieving stableIngress `%s` from cache: %v", stableIngressName, err)
 	}
 	r.log.Info("Fqdn ingress is atleast able to get", fqdnIngress.Spec.VirtualHost.Fqdn)
+	r.log.Info("The desired weight is", desiredWeight)
 
 	// canaryServiceName := r.cfg.Rollout.Spec.Strategy.Canary.CanaryService
 
@@ -70,7 +73,7 @@ func (r *Reconciler) SetWeight(desiredWeight int32) error {
 	//}
 	// Check if canary ingress exists (from lister which has a cache), determines whether we later call Create() or Update()
 	// canaryIngress, err := r.cfg.IngressLister.Ingresses(r.cfg.Rollout.Namespace).Get(canaryIngressName)
-	canaryIngress, err := r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, canaryIngressName, metav1.GetOptions{})
+	canaryIngress, err := r.cfg.Client.KapcomV1beta1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, canaryIngressName, metav1.GetOptions{})
 	canaryIngressExists := true
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
@@ -90,7 +93,7 @@ func (r *Reconciler) SetWeight(desiredWeight int32) error {
 	}
 
 	if !canaryIngressExists {
-		_, err = r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Create(ctx, desiredCanaryIngress, metav1.CreateOptions{})
+		_, err = r.cfg.Client.KapcomV1beta1().IngressRoutes(r.cfg.Rollout.Namespace).Create(ctx, desiredCanaryIngress, metav1.CreateOptions{})
 		if err == nil {
 			return nil
 		}
@@ -101,16 +104,17 @@ func (r *Reconciler) SetWeight(desiredWeight int32) error {
 		// Canary ingress was created by a different reconcile call before this one could complete (race)
 		// This means we just read it from the API now (instead of cache) and continue with the normal
 		// flow we take when the canary already existed.
-		canaryIngress, err = r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, canaryIngressName, metav1.GetOptions{})
+		canaryIngress, err = r.cfg.Client.KapcomV1beta1().IngressRoutes(r.cfg.Rollout.Namespace).Get(ctx, canaryIngressName, metav1.GetOptions{})
 		if err != nil {
 			r.log.WithField(logutil.IngressKey, canaryIngressName).Error(err.Error())
 			return fmt.Errorf("error retrieving canary ingress `%s` from api: %v", canaryIngressName, err)
 		}
 	}
 	current_canary_weight := canaryIngress.Spec.Routes[0].Services[1].Weight
+	r.log.Info("The current canary weight is", current_canary_weight)
 
 	if current_canary_weight != int(desiredWeight) {
-		r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Update(ctx, desiredCanaryIngress, metav1.UpdateOptions{})
+		r.cfg.Client.KapcomV1beta1().IngressRoutes(r.cfg.Rollout.Namespace).Update(ctx, desiredCanaryIngress, metav1.UpdateOptions{})
 	}
 
 	return nil
@@ -118,7 +122,7 @@ func (r *Reconciler) SetWeight(desiredWeight int32) error {
 
 // This method should create the new ingressroute for base, if not present.
 // SetWeight modifies Nginx Ingress resources to reach desired state
-func (r *Reconciler) canaryIngressRoute(desiredWeight int32) (*v1alpha1.IngressRoute, error) {
+func (r *Reconciler) canaryIngressRoute(desiredWeight int32) (*v1beta1.IngressRoute, error) {
 	canary := r.cfg.Rollout.Spec.Strategy.Canary.TrafficRouting.Kapcom
 	stableIngressName := r.cfg.Rollout.Spec.Strategy.Canary.TrafficRouting.Kapcom.Ingress
 	stableServiceName := r.cfg.Rollout.Spec.Strategy.Canary.StableService
@@ -129,12 +133,12 @@ func (r *Reconciler) canaryIngressRoute(desiredWeight int32) (*v1alpha1.IngressR
 	// On the fqdn ingress basis this will be created
 	// Check if stable ingress exists (from lister, which has a cache), error if it does not
 
-	newSpec := v1alpha1.IngressRouteSpec{
-		Routes: []v1alpha1.Route{
+	newSpec := v1beta1.IngressRouteSpec{
+		Routes: []v1beta1.Route{
 			{
 				PermitInsecure: true,
 				Match:          "/",
-				Services: []v1alpha1.Service{
+				Services: []v1beta1.Service{
 					{
 						Name:   stableServiceName,
 						Port:   int(canary.ServicePort),
@@ -152,12 +156,13 @@ func (r *Reconciler) canaryIngressRoute(desiredWeight int32) (*v1alpha1.IngressR
 
 	if desiredWeight > 0 {
 		primary_weight := 100 - desiredWeight
-		newSpec = v1alpha1.IngressRouteSpec{
-			Routes: []v1alpha1.Route{
+		r.log.Info("The primary weight should be ", primary_weight)
+		newSpec = v1beta1.IngressRouteSpec{
+			Routes: []v1beta1.Route{
 				{
 					PermitInsecure: true,
 					Match:          "/",
-					Services: []v1alpha1.Service{
+					Services: []v1beta1.Service{
 						{
 							Name:   stableServiceName,
 							Port:   int(canary.ServicePort),
@@ -174,24 +179,28 @@ func (r *Reconciler) canaryIngressRoute(desiredWeight int32) (*v1alpha1.IngressR
 		}
 	}
 
-	proxy, err := r.cfg.Client.ArgoprojV1alpha1().IngressRoutes(r.cfg.Rollout.Namespace).Get(context.TODO(), canaryIngressName, metav1.GetOptions{})
+	proxy, err := r.cfg.Client.KapcomV1beta1().IngressRoutes(r.cfg.Rollout.Namespace).Get(context.TODO(), canaryIngressName, metav1.GetOptions{})
 	m := make(map[string]string)
 	m["annotation"] = "contour-corp"
 
 	if errors.IsNotFound(err) {
-		proxy = &v1alpha1.IngressRoute{
+		r.log.Info("In the not found part")
+		proxy = &v1beta1.IngressRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      canaryIngressName,
 				Namespace: r.cfg.Rollout.Namespace,
 			},
 			Spec: newSpec,
-			Status: v1alpha1.Status{
+			Status: v1beta1.Status{
 				CurrentStatus: "valid",
 				Description:   "valid IngressRoute",
 			},
 		}
 
 		proxy.Annotations = m
+	} else {
+		r.log.Info("In the else part")
+		proxy.Spec = newSpec
 	}
 	return proxy, nil
 }

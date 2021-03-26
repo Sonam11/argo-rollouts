@@ -20,6 +20,8 @@ package fake
 
 import (
 	clientset "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned"
+	kapcomv1beta1 "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned/typed/kapcom/v1beta1"
+	fakekapcomv1beta1 "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned/typed/kapcom/v1beta1/fake"
 	argoprojv1alpha1 "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned/typed/rollouts/v1alpha1"
 	fakeargoprojv1alpha1 "github.com/argoproj/argo-rollouts/pkg/client/clientset/versioned/typed/rollouts/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -75,6 +77,11 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 }
 
 var _ clientset.Interface = &Clientset{}
+
+// KapcomV1beta1 retrieves the KapcomV1beta1Client
+func (c *Clientset) KapcomV1beta1() kapcomv1beta1.KapcomV1beta1Interface {
+	return &fakekapcomv1beta1.FakeKapcomV1beta1{Fake: &c.Fake}
+}
 
 // ArgoprojV1alpha1 retrieves the ArgoprojV1alpha1Client
 func (c *Clientset) ArgoprojV1alpha1() argoprojv1alpha1.ArgoprojV1alpha1Interface {

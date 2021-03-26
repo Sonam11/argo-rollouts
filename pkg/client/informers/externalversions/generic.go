@@ -21,6 +21,7 @@ package externalversions
 import (
 	"fmt"
 
+	v1beta1 "github.com/argoproj/argo-rollouts/pkg/apis/kapcom/v1beta1"
 	v1alpha1 "github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -61,10 +62,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Argoproj().V1alpha1().ClusterAnalysisTemplates().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("experiments"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Argoproj().V1alpha1().Experiments().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("ingressroutes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Argoproj().V1alpha1().IngressRoutes().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("rollouts"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Argoproj().V1alpha1().Rollouts().Informer()}, nil
+
+		// Group=kapcom.io, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("ingressroutes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Kapcom().V1beta1().IngressRoutes().Informer()}, nil
 
 	}
 

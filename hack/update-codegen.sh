@@ -24,7 +24,7 @@ chmod +x ${CODEGEN_PKG}/generate-groups.sh
 
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
   github.com/argoproj/argo-rollouts/pkg/client github.com/argoproj/argo-rollouts/pkg/apis \
-  "rollouts:v1alpha1" \
+  "rollouts:v1alpha1 kapcom:v1beta1" \
   --output-base "${TEMP_DIR}" \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt
 

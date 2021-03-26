@@ -46,14 +46,6 @@ type ExperimentListerExpansion interface{}
 // ExperimentNamespaceLister.
 type ExperimentNamespaceListerExpansion interface{}
 
-// IngressRouteListerExpansion allows custom methods to be added to
-// IngressRouteLister.
-type IngressRouteListerExpansion interface{}
-
-// IngressRouteNamespaceListerExpansion allows custom methods to be added to
-// IngressRouteNamespaceLister.
-type IngressRouteNamespaceListerExpansion interface{}
-
 // RolloutListerExpansion allows custom methods to be added to
 // RolloutLister.
 type RolloutListerExpansion interface{}

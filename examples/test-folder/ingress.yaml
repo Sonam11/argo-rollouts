@@ -1,0 +1,24 @@
+apiVersion: contour.heptio.com/v1beta1
+kind: IngressRoute
+metadata:
+  name: argo-kapcom
+  namespace: argo-kapcom-test
+  labels:
+    kd_created: "true"
+    app: rollouts-demo-2
+    kd_domain_id: ethos-domain-0
+  annotations:
+    adobe.archpath: sc.server.test
+    adobe.class: AppServer
+    ethos.containerid: middleware
+    kubernetes.io/ingress.class: contour-corp
+spec:
+  virtualhost:
+    fqdn: middleware.sandbox.cloud.adobe.io
+    tls:
+      secretName: heptio-contour/cluster-ssl-alternate
+  routes:
+  - match: /
+    delegate:
+      name: argo-kapcom-base-canary
+      namespace: argo-kapcom-test
