@@ -4,6 +4,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
   name: rollout-bluegreen
+  namespace: new-test
 spec:
   replicas: 2
   revisionHistoryLimit: 2
@@ -35,12 +36,22 @@ spec:
       # stack as soon as the ReplicaSet are completely ready/available.
       # Rollouts can be resumed using: `kubectl argo rollouts promote ROLLOUT`
       autoPromotionEnabled: false
+      steps:
+      - setWeight: 20
+      - pause: {}
+      - setWeight: 40
+      - pause: {duration: 10}
+      - setWeight: 60
+      - pause: {duration: 10}
+      - setWeight: 80
+      - pause: {duration: 10}
 
 ---
 kind: Service
 apiVersion: v1
 metadata:
   name: rollout-bluegreen-active
+  namespace: new-test
 spec:
   selector:
     app: rollout-bluegreen
@@ -54,6 +65,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: rollout-bluegreen-preview
+  namespace: new-test
 spec:
   selector:
     app: rollout-bluegreen

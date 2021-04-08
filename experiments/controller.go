@@ -44,6 +44,7 @@ type Controller struct {
 	replicaSetControl controller.RSControlInterface
 
 	replicaSetLister              appslisters.ReplicaSetLister
+	deploymentLister              appslisters.DeploymentLister
 	experimentsLister             listers.ExperimentLister
 	analysisTemplateLister        listers.AnalysisTemplateLister
 	clusterAnalysisTemplateLister listers.ClusterAnalysisTemplateLister

@@ -90,6 +90,7 @@ type ControllerConfig struct {
 	AnalysisTemplateInformer        informers.AnalysisTemplateInformer
 	ClusterAnalysisTemplateInformer informers.ClusterAnalysisTemplateInformer
 	ReplicaSetInformer              appsinformers.ReplicaSetInformer
+	DeploymentInformer              appsinformers.DeploymentInformer
 	ServicesInformer                coreinformers.ServiceInformer
 	IngressInformer                 extensionsinformers.IngressInformer
 	RolloutsInformer                informers.RolloutInformer
